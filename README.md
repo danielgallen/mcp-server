@@ -67,6 +67,57 @@ Configuration for the extension is done through the Burp Suite UI in the `MCP` t
 - **Enable config editing**: The `Enable tools that can edit your config` checkbox allows the MCP server to expose tools which can edit Burp configuration files.
 - **Advanced options**: You can configure the port and host for the MCP server. By default, it listens on `http://127.0.0.1:9876`.
 
+### Codex plugin
+
+The desktop-only plugin starts its bundled Java stdio proxy, which connects to
+Burp's local SSE endpoint at `http://127.0.0.1:9876`. Install Java 21 or newer
+and make `java` available on your PATH. Burp and the updated extension must be
+running on the same computer. Other MCP clients can still use Streamable HTTP
+at `http://127.0.0.1:9876/mcp` directly.
+
+1. Build the updated extension and plugin ZIP from this repository:
+   ```bash
+   ./gradlew embedProxyJar codexPluginZip
+   ```
+2. Load the updated extension JAR into Burp Suite and enable its MCP server.
+3. Add this repository as a local Codex plugin marketplace:
+   ```bash
+   codex plugin marketplace add /absolute/path/to/mcp-server
+   ```
+4. Restart Codex desktop, open Plugins, select **Burp Suite Local**, and install
+   **Burp Suite**. Start a new chat and ask Codex to list Burp tools.
+
+The repository marketplace is `.agents/plugins/marketplace.json`; plugin sources
+are in `plugins/burp-suite`. The distributable ZIP is
+`build/distributions/burp-suite-codex-plugin.zip`. It contains the plugin
+manifest and the bundled stdio proxy, but not Burp or the extension. If you
+change Burp's port, update the `--sse-url` argument in
+`plugins/burp-suite/mcp.json` before reinstalling or packaging the plugin.
+Keep the server bound to loopback. Existing Burp approval settings still apply
+to tool calls.
+
+#### Submit to the OpenAI Plugin Directory
+
+This is a [desktop-only local MCP plugin](https://developers.openai.com/plugins/deploy/desktop-only).
+The repository marketplace is for local testing and does not publish the plugin
+to the public directory.
+
+1. Ask the OpenAI representative to confirm local MCP partner eligibility and
+   allowlist the submitting PortSwigger OpenAI Platform organization ID.
+2. Build `./gradlew codexPluginZip` and test an installation of that ZIP in a
+   clean ChatGPT desktop environment with Burp running. Check tool discovery,
+   read tools, a Burp-approved HTTP request, and a denied request.
+3. In the [plugin submission portal](https://platform.openai.com/plugins),
+   create a plugin using **Skills only**, then upload the ZIP. Approved local
+   MCP submissions do not need a skill. Resolve automated findings and supply
+   the required publisher identity, review cases, and demonstration materials.
+4. Submit for review. After approval, publish the plugin from the portal.
+
+The ZIP uses the default Burp port. Update `mcp.json` and rebuild it if the
+review environment uses another port. The public listing requires a verified
+PortSwigger publisher identity and an allowlisted organization; building the
+ZIP alone does not make it public.
+
 ### Claude Desktop Client
 
 To fully utilize the MCP Server Extension with Claude, you need to configure your Claude client settings appropriately.
@@ -131,7 +182,7 @@ If you modify the proxy source, rebuild and copy it into this project before pac
 ```bash
 # From mcp-proxy
 ./gradlew shadowJar
-cp build/libs/mcp-proxy-all.jar /path/to/mcp-server/libs/mcp-proxy-all.jar
+cp build/libs/mcp-proxy-all.jar /path/to/mcp-server/plugins/burp-suite/server/mcp-proxy-all.jar
 
 # From mcp-server
 ./gradlew embedProxyJar

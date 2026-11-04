@@ -1,0 +1,12 @@
+{
+  "name": "burp-suite-local",
+  "interface": { "displayName": "Burp Suite Local" },
+  "plugins": [
+    {
+      "name": "burp-suite",
+      "source": { "source": "local", "path": "./plugins/burp-suite" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Developer Tools"
+    }
+  ]
+}

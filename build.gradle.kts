@@ -4,8 +4,8 @@ abstract class EmbedProxyJarTask : DefaultTask() {
     @get:InputFile
     abstract val shadowJarFile: RegularFileProperty
 
-    @get:InputDirectory
-    abstract val projectDir: DirectoryProperty
+    @get:InputFile
+    abstract val proxyJarFile: RegularFileProperty
 
     @get:Inject
     abstract val execOperations: ExecOperations
@@ -13,15 +13,15 @@ abstract class EmbedProxyJarTask : DefaultTask() {
     @TaskAction
     fun embedJar() {
         val shadowJar = shadowJarFile.get().asFile
-        val libsDir = projectDir.dir("libs").get().asFile
-        val proxyJarFile = File(libsDir, "mcp-proxy-all.jar")
+        val proxyJarFile = proxyJarFile.get().asFile
+        val libsDir = proxyJarFile.parentFile
 
         if (!proxyJarFile.exists()) {
             throw GradleException("Proxy JAR not found at: ${proxyJarFile.absolutePath}")
         }
 
         execOperations.exec {
-            workingDir(projectDir.get().asFile)
+            workingDir(libsDir)
             commandLine("jar", "uf", shadowJar.absolutePath, "-C", libsDir.absolutePath, proxyJarFile.name)
         }
 
@@ -126,6 +126,8 @@ tasks {
         exclude("module-info.class")
 
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        // Burp loads parent classes first and may bundle an incompatible coroutine runtime.
+        relocate("kotlinx.coroutines", "net.portswigger.mcp.shaded.kotlinx.coroutines")
     }
 
     register<EmbedProxyJarTask>("embedProxyJar") {
@@ -133,7 +135,7 @@ tasks {
         description = "Embeds the MCP proxy JAR into the shadow JAR"
         dependsOn(shadowJar)
         shadowJarFile.set(shadowJar.flatMap { it.archiveFile })
-        projectDir.set(layout.projectDirectory)
+        proxyJarFile.set(layout.projectDirectory.file("plugins/burp-suite/server/mcp-proxy-all.jar"))
     }
 
     build {
@@ -149,4 +151,13 @@ tasks {
 tasks.wrapper {
     gradleVersion = "9.2.0"
     distributionType = Wrapper.DistributionType.BIN
+}
+
+tasks.register<Zip>("codexPluginZip") {
+    group = "distribution"
+    description = "Packages the Codex plugin for the local Burp MCP server"
+    from(layout.projectDirectory.dir("plugins/burp-suite"))
+    from(layout.projectDirectory.file("LICENSE"))
+    archiveFileName.set("burp-suite-codex-plugin.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
 }

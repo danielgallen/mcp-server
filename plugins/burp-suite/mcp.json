@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "burp": {
+      "type": "stdio",
+      "command": "java",
+      "args": [
+        "-Dkotlin-logging.logStartupMessage=false",
+        "-jar",
+        "${PLUGIN_ROOT}/server/mcp-proxy-all.jar",
+        "--sse-url",
+        "http://127.0.0.1:9876"
+      ],
+      "cwd": "${PLUGIN_ROOT}"
+    }
+  }
+}

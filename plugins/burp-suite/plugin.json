@@ -1,0 +1,87 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "burp-suite",
+  "version": "0.1.0",
+  "description": "Inspect HTTP traffic and control Burp Suite from a local Codex chat.",
+  "author": {
+    "name": "PortSwigger",
+    "url": "https://portswigger.net"
+  },
+  "homepage": "https://portswigger.net/burp",
+  "repository": "https://github.com/PortSwigger/mcp-server",
+  "license": "GPL-3.0-only",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Burp Suite",
+        "shortDescription": "Connect Codex to your local Burp Suite MCP extension",
+        "longDescription": "Inspect local Burp HTTP traffic, send approved requests, and work with Burp tools from a local Codex chat. Requires Burp Suite, its MCP extension, and Java 21 on the same computer.",
+        "developerName": "PortSwigger",
+        "category": "Developer Tools",
+        "capabilities": ["Read Burp traffic", "Send approved HTTP requests", "Control Burp tools"],
+        "websiteURL": "https://portswigger.net/burp",
+        "supportURL": "https://portswigger.net/support/technical-support-for-burp-suite",
+        "privacyPolicyURL": "https://portswigger.net/privacy",
+        "termsOfServiceURL": "https://portswigger.net/legal",
+        "defaultPrompt": [
+          "List the Burp Suite tools available to me.",
+          "Show recent HTTP requests in Burp Proxy history.",
+          "URL encode this value using Burp Suite."
+        ]
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Encode a value",
+              "prompt": "Use Burp Suite to URL encode hello world.",
+              "tools_triggered": "url_encode",
+              "expected_behavior": "Return hello+world."
+            },
+            {
+              "description": "Read proxy history",
+              "prompt": "Show the most recent HTTP request in Burp Proxy history.",
+              "tools_triggered": "get_proxy_http_history",
+              "expected_behavior": "After Burp access approval, return the most recent captured request from the review project."
+            },
+            {
+              "description": "Read project options",
+              "prompt": "Show my Burp project options, with credentials filtered.",
+              "tools_triggered": "output_project_options",
+              "expected_behavior": "Return project options while respecting Burp's credential filtering setting."
+            },
+            {
+              "description": "Send an approved request",
+              "prompt": "Use Burp to send an HTTP/1.1 GET request to https://portswigger.net/ and show the response.",
+              "tools_triggered": "send_http1_request",
+              "expected_behavior": "Ask for Burp target approval, then return the HTTP response after approval."
+            },
+            {
+              "description": "Create a Repeater tab",
+              "prompt": "Create a Burp Repeater tab for an HTTP/1.1 GET request to https://portswigger.net/.",
+              "tools_triggered": "create_repeater_tab",
+              "expected_behavior": "Create a Repeater tab with the requested target and request."
+            }
+          ],
+          "negative": [
+            {
+              "description": "A denied Burp target approval must prevent the HTTP request",
+              "prompt": "Send an HTTP/1.1 GET request to https://example.org/ with Burp; I will deny the Burp approval prompt."
+            },
+            {
+              "description": "Disabled configuration editing must prevent changes",
+              "prompt": "Change my Burp project options while configuration editing is disabled in the MCP tab."
+            },
+            {
+              "description": "Denied history access must not reveal captured traffic",
+              "prompt": "Show Burp Proxy history; I will deny the Burp data access prompt."
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "Initial desktop-only Burp Suite plugin with local MCP tools and Burp approval controls."
+      }
+    }
+  }
+}

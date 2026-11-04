@@ -13,6 +13,7 @@ import io.modelcontextprotocol.kotlin.sdk.types.Implementation
 import io.modelcontextprotocol.kotlin.sdk.types.ServerCapabilities
 import io.modelcontextprotocol.kotlin.sdk.server.ServerOptions
 import io.modelcontextprotocol.kotlin.sdk.server.mcp
+import io.modelcontextprotocol.kotlin.sdk.server.mcpStreamableHttp
 import net.portswigger.mcp.config.McpConfig
 import net.portswigger.mcp.tools.registerTools
 import java.net.URI
@@ -33,14 +34,15 @@ class KtorServerManager(private val api: MontoyaApi) : ServerManager {
                 server?.stop(1000, 5000)
                 server = null
 
-                val mcpServer = Server(
+                fun createMcpServer() = Server(
                     serverInfo = Implementation("burp-suite", "1.1.2"), options = ServerOptions(
                         capabilities = ServerCapabilities(
                             tools = ServerCapabilities.Tools(listChanged = false)
                         )
                     )
-                )
+                ).also { it.registerTools(api, config) }
 
+                val mcpServer = createMcpServer()
                 server = embeddedServer(Netty, port = config.port, host = config.host) {
                     install(CORS) {
                         allowHost("localhost:${config.port}")
@@ -96,7 +98,9 @@ class KtorServerManager(private val api: MontoyaApi) : ServerManager {
                         mcpServer
                     }
 
-                    mcpServer.registerTools(api, config)
+                    mcpStreamableHttp(path = "/mcp") {
+                        createMcpServer()
+                    }
                 }.apply {
                     start(wait = false)
                 }
@@ -104,6 +108,9 @@ class KtorServerManager(private val api: MontoyaApi) : ServerManager {
                 api.logging().logToOutput("Started MCP server on ${config.host}:${config.port}")
                 callback(ServerState.Running)
 
+            } catch (e: LinkageError) {
+                api.logging().logToError(e)
+                callback(ServerState.Failed(e))
             } catch (e: Exception) {
                 api.logging().logToError(e)
                 callback(ServerState.Failed(e))

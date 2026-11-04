@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * End-to-end test verifying the full stack:
  * TestStdioMcpClient (stdio) ↔ proxy subprocess ↔ KtorServerManager (SSE)
  *
- * Requires libs/mcp-proxy-all.jar to be present (built via `./gradlew embedProxyJar` from root).
+ * Requires plugins/burp-suite/server/mcp-proxy-all.jar (also bundled in the plugin ZIP).
  */
 @Timeout(30, unit = TimeUnit.SECONDS)
 class ProxyEndToEndTest {
@@ -128,9 +128,9 @@ class ProxyEndToEndTest {
             throw IllegalStateException("Server failed to start after timeout")
         }
 
-        val jarFile = File("libs/mcp-proxy-all.jar")
+        val jarFile = File("plugins/burp-suite/server/mcp-proxy-all.jar")
         check(jarFile.exists()) {
-            "libs/mcp-proxy-all.jar not found. Build it and copy it to libs first: ./gradlew embedProxyJar (from proxy repo root)"
+            "Plugin proxy JAR not found at ${jarFile.path}"
         }
 
         proxyProcess = ProcessBuilder(

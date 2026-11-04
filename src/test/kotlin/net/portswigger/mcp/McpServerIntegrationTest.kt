@@ -3,6 +3,11 @@ package net.portswigger.mcp
 import burp.api.montoya.MontoyaApi
 import burp.api.montoya.logging.Logging
 import burp.api.montoya.persistence.PersistedObject
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.sse.SSE
+import io.modelcontextprotocol.kotlin.sdk.client.Client
+import io.modelcontextprotocol.kotlin.sdk.types.Implementation
+import io.modelcontextprotocol.kotlin.sdk.client.StreamableHttpClientTransport
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.delay
@@ -71,6 +76,40 @@ class McpServerIntegrationTest {
             }
         }
         serverManager.stop {}
+    }
+
+    @Test
+    fun `streamable HTTP supports independent clients and tool calls`() = runBlocking {
+        every { api.utilities().urlUtils().encode("hello world") } returns "hello+world"
+        repeat(2) {
+            val http = HttpClient {
+                install(SSE)
+            }
+            val mcp = Client(
+                Implementation("codex-test", "1.0")
+            )
+            try {
+                mcp.connect(StreamableHttpClientTransport(
+                    http, url = "http://127.0.0.1:$testPort/mcp"
+                ))
+                val tools = mcp.listTools().tools
+                assertTrue(tools.any { it.name == "url_encode" })
+                assertTrue(tools.all { tool ->
+                    tool.annotations?.let {
+                        it.readOnlyHint != null && it.destructiveHint != null && it.openWorldHint != null
+                    } == true
+                })
+                assertEquals(true, tools.single { it.name == "send_http1_request" }.annotations?.destructiveHint)
+                assertEquals(true, tools.single { it.name == "send_http1_request" }.annotations?.openWorldHint)
+                val result = mcp.callTool("url_encode", mapOf("content" to "hello world"))
+                assertEquals(false, result.isError ?: false)
+                assertEquals("hello+world", (result.content.single() as io.modelcontextprotocol.kotlin.sdk.types.TextContent).text)
+                assertNotNull(mcp.ping())
+            } finally {
+                mcp.close()
+                http.close()
+            }
+        }
     }
 
     @Test
